@@ -242,6 +242,7 @@ The desktop app also offers a loopback-only control channel (`figcraft --control
 - **Clean-room:** implemented from public documentation and observed behaviour only. No proprietary code, file formats, icons or images.
 
 ## Get started
+To build Windows packages for this fork, run the ArtCraft Launcher release workflow with a pinned source revision.
 
 ```sh
 git clone https://github.com/storytold/figcraft
