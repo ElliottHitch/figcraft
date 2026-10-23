@@ -38,7 +38,7 @@
     <Icon Id="FigcraftIcon.exe" SourceFile="$(var.IconPath)" />
     <Property Id="ARPPRODUCTICON" Value="FigcraftIcon.exe" />
     <Property Id="ARPURLINFOABOUT" Value="https://getartcraft.com/apps/figcraft" />
-    <Property Id="ARPURLUPDATEINFO" Value="https://getartcraft.com/apps/figcraft" />
+    <Property Id="ARPURLUPDATEINFO" Value="https://github.com/ElliottHitch/figcraft/releases" />
     <Property Id="ARPHELPLINK" Value="https://discord.gg/artcraft" />
 
     <StandardDirectory Id="ProgramFiles6432Folder">
