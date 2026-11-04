@@ -1026,17 +1026,28 @@ pub fn write_file_atomic(path: &std::path::Path, bytes: &[u8]) -> std::io::Resul
         let mut name = path.as_os_str().to_os_string();
         name.push(format!(".tmp-figcraft-{}-{}", std::process::id(), STAGING.fetch_add(1, Relaxed)));
         let tmp = std::path::PathBuf::from(name);
-        match std::fs::OpenOptions::new().write(true).create_new(true).open(&tmp) {
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            // No readable staging window, even with a permissive umask.
+            options.mode(0o600);
+        }
+        match options.open(&tmp) {
             Ok(mut file) => {
-                // The replacement keeps the destination's permissions from the start, so a private
-                // file's content is never readable under default ones (the open handle still writes).
-                if let Ok(old) = std::fs::metadata(path) {
-                    let _ = file.set_permissions(old.permissions());
+                let result = match std::fs::metadata(path) {
+                    Ok(old) => file.set_permissions(old.permissions()),
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+                    Err(e) => Err(e),
                 }
-                if let Err(e) = file.write_all(bytes) {
+                .and_then(|()| file.write_all(bytes));
+                if let Err(e) = result {
+                    drop(file);
                     let _ = std::fs::remove_file(&tmp);
                     return Err(e);
                 }
+                drop(file);
                 return match std::fs::rename(&tmp, path) {
                     Ok(()) => Ok(()),
                     // Leave nothing behind when the file can't take its place.

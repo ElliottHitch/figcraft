@@ -130,10 +130,36 @@ fn a_replaced_file_keeps_its_permissions() {
     use std::os::unix::fs::PermissionsExt;
     let d = dir("mode");
     let path = d.join("a.figcraft");
-    std::fs::write(&path, b"old").unwrap();
-    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
-    write_file_atomic(&path, b"new").unwrap();
-    assert_eq!(std::fs::read(&path).unwrap(), b"new");
-    assert_eq!(std::fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o600);
+    for mode in [0o600, 0o640] {
+        std::fs::write(&path, b"old").unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(mode)).unwrap();
+        write_file_atomic(&path, b"new").unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), b"new");
+        assert_eq!(std::fs::metadata(&path).unwrap().permissions().mode() & 0o777, mode);
+    }
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[cfg(unix)]
+#[test]
+fn a_new_file_is_private() {
+    use std::os::unix::fs::PermissionsExt;
+    let d = dir("private-new");
+    let path = d.join("a.figcraft");
+    write_file_atomic(&path, b"private").unwrap();
+    assert_eq!(std::fs::read(&path).unwrap(), b"private");
+    assert_eq!(std::fs::metadata(&path).unwrap().permissions().mode() & 0o077, 0);
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[cfg(unix)]
+#[test]
+fn unreadable_destination_permissions_abort_without_replacement() {
+    let d = dir("permission-error");
+    let path = d.join("a.figcraft");
+    std::os::unix::fs::symlink("a.figcraft", &path).unwrap();
+    assert!(write_file_atomic(&path, b"private").is_err());
+    assert_eq!(std::fs::read_link(&path).unwrap(), std::path::Path::new("a.figcraft"));
+    assert_eq!(std::fs::read_dir(&d).unwrap().count(), 1, "no staging file left behind");
     let _ = std::fs::remove_dir_all(&d);
 }
